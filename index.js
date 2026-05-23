@@ -6,7 +6,12 @@ const path = "data.json";
 const git = simpleGit();
 
 const daysToFill = Number(process.env.DAYS_TO_FILL ?? 120);
-const commitsPerDay = Number(process.env.COMMITS_PER_DAY ?? 3);
+const minCommitsPerDay = Number(process.env.MIN_COMMITS_PER_DAY ?? 1);
+const maxCommitsPerDay = Number(process.env.MAX_COMMITS_PER_DAY ?? 4);
+const skipChance = Number(process.env.SKIP_CHANCE ?? 0.18);
+
+const randomInt = (min, max) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
 const makeCommit = async (date) => {
   const data = { date };
@@ -17,18 +22,30 @@ const makeCommit = async (date) => {
   console.log(`Committed ${date}`);
 };
 
+let totalCommits = 0;
+
 for (let dayOffset = daysToFill - 1; dayOffset >= 0; dayOffset -= 1) {
-  for (let commitIndex = 0; commitIndex < commitsPerDay; commitIndex += 1) {
+  const day = moment().subtract(dayOffset, "days");
+
+  if (Math.random() < skipChance) {
+    console.log(`Skipped ${day.format("YYYY-MM-DD")}`);
+    continue;
+  }
+
+  const commitsToday = randomInt(minCommitsPerDay, maxCommitsPerDay);
+
+  for (let commitIndex = 0; commitIndex < commitsToday; commitIndex += 1) {
     const date = moment()
       .subtract(dayOffset, "days")
       .hour(12)
-      .minute(commitIndex * 10)
+      .minute(10 + commitIndex * 15)
       .second(0)
       .format();
 
     await makeCommit(date);
+    totalCommits += 1;
   }
 }
 
 await git.push();
-console.log(`Pushed ${daysToFill * commitsPerDay} commits to origin.`);
+console.log(`Pushed ${totalCommits} commits to origin.`);
